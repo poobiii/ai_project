@@ -1,4 +1,32 @@
 import streamlit as st
+import folium
+from streamlit_folium import st_folium
+
+st.set_page_config(
+    page_title="서울 관광지 TOP10",
+    page_icon="🗺️",
+    layout="wide"
+)
+
+st.title("🇰🇷 외국인들이 좋아하는 서울 관광지 TOP10")
+st.markdown("서울의 인기 관광지를 지도에서 확인해보세요! ✨")
+
+# 서울 중심 좌표
+m = folium.Map(
+    location=[37.5665, 126.9780],
+    zoom_start=11
+)
+
+# 관광지 데이터
+places = [
+    {
+        "name": "경복궁",
+        "location": [37.5796, 126.9770],
+        "emoji": "🏯",
+        "desc": "조선 시대의 대표 궁궐"
+    },
+    {
+        "name": "N서울타워",
         "location": [37.5512, 126.9882],
         "emoji": "🗼",
         "desc": "서울 야경 명소"
@@ -57,7 +85,7 @@ import streamlit as st
 for place in places:
     folium.Marker(
         location=place["location"],
-        popup=f"{place['emoji']} <b>{place['name']}</b><br>{place['desc']}",
+        popup=f'{place["emoji"]} <b>{place["name"]}</b><br>{place["desc"]}',
         tooltip=place["name"],
         icon=folium.Icon(color="red", icon="star")
     ).add_to(m)
@@ -69,4 +97,6 @@ st.markdown("---")
 st.subheader("📍 관광지 리스트")
 
 for idx, place in enumerate(places, start=1):
-    st.markdown(f"**{idx}. {place['emoji']} {place['name']}** - {place['desc']}")
+    st.markdown(
+        f'**{idx}. {place["emoji"]} {place["name"]}** - {place["desc"]}'
+    )
