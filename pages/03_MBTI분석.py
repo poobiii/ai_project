@@ -5,141 +5,239 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-# -----------------------------
+# ---------------------------------
 # 페이지 설정
-# -----------------------------
+# ---------------------------------
 st.set_page_config(
-    page_title="MBTI Country Analyzer",
+    page_title="🌍 MBTI Country Analyzer",
     page_icon="🌍",
     layout="wide"
 )
 
-st.title("🌍 국가별 MBTI 분석")
-st.write("국가를 선택하면 MBTI 비율을 그래프로 보여줘요!")
+st.title("🌍 국가별 MBTI 분석기")
 
-# -----------------------------
+# ---------------------------------
 # 데이터 불러오기
-# -----------------------------
+# ---------------------------------
 @st.cache_data
 def load_data():
-    return pd.read_csv("countriesMBTI_16types(1).csv")
+    df = pd.read_csv("countriesMBTI_16types(1).csv")
+    return df
 
 df = load_data()
 
-# -----------------------------
-# 컬럼 정리
-# -----------------------------
+# 컬럼 공백 제거
 df.columns = df.columns.str.strip()
 
-# 첫 번째 컬럼 = 국가명
+# 국가 컬럼
 country_col = df.columns[0]
 
 # MBTI 컬럼
-mbti_cols = df.columns[1:]
+mbti_cols = list(df.columns[1:])
 
-# -----------------------------
-# 국가 선택
-# -----------------------------
-selected_country = st.selectbox(
-    "국가 선택 🇺🇳",
-    sorted(df[country_col].unique())
+# 숫자 변환
+for col in mbti_cols:
+    df[col] = (
+        df[col]
+        .astype(str)
+        .str.replace("%", "", regex=False)
+        .astype(float)
+    )
+
+# ---------------------------------
+# 메뉴 선택
+# ---------------------------------
+menu = st.sidebar.radio(
+    "메뉴 선택",
+    [
+        "🌎 국가별 MBTI 보기",
+        "📊 MBTI별 국가 TOP10"
+    ]
 )
 
-# -----------------------------
-# 선택 국가 데이터
-# -----------------------------
-row = df[df[country_col] == selected_country].iloc[0]
+# =================================
+# 1. 국가 선택 기능
+# =================================
+if menu == "🌎 국가별 MBTI 보기":
 
-mbti_data = {}
+    st.header("🌎 국가별 MBTI 비율")
 
-for col in mbti_cols:
-    value = row[col]
+    selected_country = st.selectbox(
+        "국가를 선택하세요",
+        sorted(df[country_col].unique())
+    )
 
-    # 퍼센트 문자열 처리
-    if isinstance(value, str):
-        value = value.replace("%", "").strip()
+    # 선택 국가 데이터
+    row = df[df[country_col] == selected_country].iloc[0]
 
-    mbti_data[col] = float(value)
+    # MBTI 데이터 추출
+    mbti_data = {}
 
-# Series 변환
-mbti_series = pd.Series(mbti_data)
+    for col in mbti_cols:
+        mbti_data[col] = row[col]
 
-# 정렬
-mbti_series = mbti_series.sort_values(ascending=False)
+    # Series 변환
+    mbti_series = pd.Series(mbti_data)
 
-# -----------------------------
-# 색상 설정
-# 1등 = 노란색
-# 나머지 = 하늘색 그라데이션
-# -----------------------------
-top_type = mbti_series.idxmax()
+    # 높은 순 정렬
+    mbti_series = mbti_series.sort_values(ascending=False)
 
-colors = []
+    # 색상 설정
+    colors = []
 
-max_value = mbti_series.max()
+    max_value = mbti_series.max()
 
-for idx, value in enumerate(mbti_series):
+    for value in mbti_series:
 
-    if mbti_series.index[idx] == top_type:
-        colors.append("#FFD700")  # 노란색
-    else:
         ratio = value / max_value
 
-        # 하늘색 → 연한색
-        r = 0.6 + (1 - ratio) * 0.3
-        g = 0.8 + (1 - ratio) * 0.15
-        b = 1.0
+        # 진한 초록 → 연한 초록
+        r = 0.7 - ratio * 0.4
+        g = 1.0
+        b = 0.7 - ratio * 0.4
 
         colors.append((r, g, b))
 
-# -----------------------------
-# 그래프 생성
-# -----------------------------
-fig, ax = plt.subplots(figsize=(13, 6))
+    # 그래프 생성
+    fig, ax = plt.subplots(figsize=(13, 6))
 
-bars = ax.bar(
-    mbti_series.index,
-    mbti_series.values,
-    color=colors
-)
-
-# 값 표시
-for bar in bars:
-    h = bar.get_height()
-
-    ax.text(
-        bar.get_x() + bar.get_width() / 2,
-        h + 0.2,
-        f"{h:.1f}%",
-        ha="center",
-        fontsize=9
+    bars = ax.bar(
+        mbti_series.index,
+        mbti_series.values,
+        color=colors
     )
 
-# 그래프 꾸미기
-ax.set_title(
-    f"{selected_country} MBTI Distribution",
-    fontsize=20,
-    weight="bold"
-)
+    # 값 표시
+    for bar in bars:
+        h = bar.get_height()
 
-ax.set_xlabel("MBTI Type", fontsize=12)
-ax.set_ylabel("Percentage (%)", fontsize=12)
+        ax.text(
+            bar.get_x() + bar.get_width()/2,
+            h + 0.2,
+            f"{h:.1f}%",
+            ha='center',
+            fontsize=9
+        )
 
-plt.xticks(rotation=45)
+    ax.set_title(
+        f"{selected_country} MBTI Distribution",
+        fontsize=20,
+        weight='bold'
+    )
 
-ax.grid(
-    axis="y",
-    linestyle="--",
-    alpha=0.3
-)
+    ax.set_xlabel("MBTI Type")
+    ax.set_ylabel("Percentage (%)")
 
-st.pyplot(fig)
+    plt.xticks(rotation=45)
 
-# -----------------------------
-# 최고 유형 표시
-# -----------------------------
-st.success(
-    f"🏆 가장 높은 유형은 "
-    f"{mbti_series.index[0]} "
-    f"({mbti_series.iloc[0]:.1f}%) 입니다!"
-)
+    ax.grid(
+        axis='y',
+        linestyle='--',
+        alpha=0.3
+    )
+
+    st.pyplot(fig)
+
+    # 순위표
+    st.subheader("🏆 MBTI 순위")
+
+    rank_df = pd.DataFrame({
+        "순위": range(1, len(mbti_series)+1),
+        "MBTI": mbti_series.index,
+        "비율(%)": mbti_series.values
+    })
+
+    st.dataframe(
+        rank_df,
+        use_container_width=True,
+        hide_index=True
+    )
+
+# =================================
+# 2. MBTI 선택 기능
+# =================================
+else:
+
+    st.header("📊 MBTI별 국가 TOP10")
+
+    selected_mbti = st.selectbox(
+        "MBTI를 선택하세요",
+        mbti_cols
+    )
+
+    # 높은 순 정렬
+    top10 = (
+        df[[country_col, selected_mbti]]
+        .sort_values(by=selected_mbti, ascending=False)
+        .head(10)
+    )
+
+    # 색상 설정
+    colors = []
+
+    max_value = top10[selected_mbti].max()
+
+    for value in top10[selected_mbti]:
+
+        ratio = value / max_value
+
+        r = 0.7 - ratio * 0.4
+        g = 1.0
+        b = 0.7 - ratio * 0.4
+
+        colors.append((r, g, b))
+
+    # 그래프 생성
+    fig, ax = plt.subplots(figsize=(13, 6))
+
+    bars = ax.bar(
+        top10[country_col],
+        top10[selected_mbti],
+        color=colors
+    )
+
+    # 값 표시
+    for bar in bars:
+        h = bar.get_height()
+
+        ax.text(
+            bar.get_x() + bar.get_width()/2,
+            h + 0.2,
+            f"{h:.1f}%",
+            ha='center',
+            fontsize=9
+        )
+
+    ax.set_title(
+        f"TOP 10 Countries for {selected_mbti}",
+        fontsize=20,
+        weight='bold'
+    )
+
+    ax.set_xlabel("Country")
+    ax.set_ylabel("Percentage (%)")
+
+    plt.xticks(rotation=20)
+
+    ax.grid(
+        axis='y',
+        linestyle='--',
+        alpha=0.3
+    )
+
+    st.pyplot(fig)
+
+    # 순위표
+    st.subheader(f"🏆 {selected_mbti} TOP10 국가")
+
+    result_df = pd.DataFrame({
+        "순위": range(1, 11),
+        "국가": top10[country_col].values,
+        "비율(%)": top10[selected_mbti].values
+    })
+
+    st.dataframe(
+        result_df,
+        use_container_width=True,
+        hide_index=True
+    )
