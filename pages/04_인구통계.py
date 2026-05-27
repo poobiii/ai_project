@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import re
 
 # -----------------------------
 # 한글 설정
@@ -17,7 +18,7 @@ def load_data():
 
 df = load_data()
 
-st.title("📊 서울시 연령별 인구 꺾은선 그래프")
+st.title("📊 서울시 연령별 인구 분석")
 
 # -----------------------------
 # 행정구 선택
@@ -30,9 +31,9 @@ selected_district = st.selectbox(
 )
 
 # -----------------------------
-# 선택 데이터
+# 선택 행 데이터
 # -----------------------------
-selected_row = df[df.iloc[:, 0] == selected_district]
+selected_row = df[df.iloc[:, 0] == selected_district].iloc[0]
 
 # 연령 컬럼
 age_columns = df.columns[3:]
@@ -42,34 +43,46 @@ population = []
 
 for col in age_columns:
 
-    # 컬럼명에서 숫자 추출
-    age = ''.join(filter(str.isdigit, str(col)))
+    # 컬럼명에서 숫자 찾기
+    match = re.search(r'\d+', str(col))
 
-    if age != "":
+    if match:
+
+        age = int(match.group())
 
         try:
-            value = selected_row[col].values[0]
+            value = pd.to_numeric(selected_row[col])
 
-            # 숫자로 변환
-            ages.append(int(age))
-            population.append(float(value))
+            # 숫자인 경우만 추가
+            if pd.notnull(value):
+
+                ages.append(age)
+                population.append(value)
 
         except:
             continue
 
 # -----------------------------
-# 꺾은선 그래프
+# 길이 강제 맞춤
+# -----------------------------
+length = min(len(ages), len(population))
+
+ages = ages[:length]
+population = population[:length]
+
+# -----------------------------
+# 그래프
 # -----------------------------
 fig, ax = plt.subplots(figsize=(14, 6))
 
 ax.plot(
     ages,
     population,
+    color='hotpink',
+    linewidth=3,
     linestyle='-',
     marker='o',
-    linewidth=3,
-    markersize=5,
-    color='hotpink'
+    markersize=4
 )
 
 # 제목
@@ -78,7 +91,7 @@ ax.set_title(
     fontsize=20
 )
 
-# 축 이름
+# 축 제목
 ax.set_xlabel("나이", fontsize=14)
 ax.set_ylabel("인구수", fontsize=14)
 
@@ -92,7 +105,7 @@ ax.grid(
     alpha=0.5
 )
 
-# 전체 격자
+# 전체 그리드
 ax.grid(True, alpha=0.3)
 
 st.pyplot(fig)
