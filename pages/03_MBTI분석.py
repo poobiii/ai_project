@@ -3,7 +3,6 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import numpy as np
 
 # ---------------------------------
 # 페이지 설정
@@ -21,7 +20,7 @@ st.title("🌍 국가별 MBTI 분석기")
 # ---------------------------------
 @st.cache_data
 def load_data():
-    df = pd.read_csv("countriesMBTI_16types(1).csv")
+    df = pd.read_csv("mbti.csv")
     return df
 
 df = load_data()
@@ -56,7 +55,7 @@ menu = st.sidebar.radio(
 )
 
 # =================================
-# 1. 국가 선택 기능
+# 국가별 MBTI
 # =================================
 if menu == "🌎 국가별 MBTI 보기":
 
@@ -67,22 +66,19 @@ if menu == "🌎 국가별 MBTI 보기":
         sorted(df[country_col].unique())
     )
 
-    # 선택 국가 데이터
     row = df[df[country_col] == selected_country].iloc[0]
 
-    # MBTI 데이터 추출
     mbti_data = {}
 
     for col in mbti_cols:
         mbti_data[col] = row[col]
 
-    # Series 변환
     mbti_series = pd.Series(mbti_data)
 
     # 높은 순 정렬
     mbti_series = mbti_series.sort_values(ascending=False)
 
-    # 색상 설정
+    # 초록색 그라데이션
     colors = []
 
     max_value = mbti_series.max()
@@ -91,14 +87,13 @@ if menu == "🌎 국가별 MBTI 보기":
 
         ratio = value / max_value
 
-        # 진한 초록 → 연한 초록
         r = 0.7 - ratio * 0.4
         g = 1.0
         b = 0.7 - ratio * 0.4
 
         colors.append((r, g, b))
 
-    # 그래프 생성
+    # 그래프
     fig, ax = plt.subplots(figsize=(13, 6))
 
     bars = ax.bar(
@@ -124,9 +119,6 @@ if menu == "🌎 국가별 MBTI 보기":
         fontsize=20,
         weight='bold'
     )
-
-    ax.set_xlabel("MBTI Type")
-    ax.set_ylabel("Percentage (%)")
 
     plt.xticks(rotation=45)
 
@@ -154,7 +146,7 @@ if menu == "🌎 국가별 MBTI 보기":
     )
 
 # =================================
-# 2. MBTI 선택 기능
+# MBTI별 국가 TOP10
 # =================================
 else:
 
@@ -165,14 +157,13 @@ else:
         mbti_cols
     )
 
-    # 높은 순 정렬
     top10 = (
         df[[country_col, selected_mbti]]
         .sort_values(by=selected_mbti, ascending=False)
         .head(10)
     )
 
-    # 색상 설정
+    # 초록색 그라데이션
     colors = []
 
     max_value = top10[selected_mbti].max()
@@ -187,7 +178,7 @@ else:
 
         colors.append((r, g, b))
 
-    # 그래프 생성
+    # 그래프
     fig, ax = plt.subplots(figsize=(13, 6))
 
     bars = ax.bar(
@@ -213,9 +204,6 @@ else:
         fontsize=20,
         weight='bold'
     )
-
-    ax.set_xlabel("Country")
-    ax.set_ylabel("Percentage (%)")
 
     plt.xticks(rotation=20)
 
