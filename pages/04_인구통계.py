@@ -43,16 +43,15 @@ selected_district = st.selectbox(
 )
 
 # ---------------------------------
-# 선택한 행
+# 선택 행 가져오기
 # ---------------------------------
 row = df[df.iloc[:, 0] == selected_district].iloc[0]
 
 # ---------------------------------
-# 0~100세 데이터 생성
+# 데이터 저장
 # ---------------------------------
-ages = list(range(0, 101))
-
-population_dict = {age: 0 for age in ages}
+ages = []
+population = []
 
 # ---------------------------------
 # 연령별 데이터 추출
@@ -61,18 +60,22 @@ for col in df.columns:
 
     col_str = str(col)
 
+    # "세" 포함 컬럼만 사용
     if (
         "세" in col_str
         and "남" not in col_str
         and "여" not in col_str
     ):
 
-        match = re.search(r"\d+", col_str)
+        # 컬럼 안의 모든 숫자 추출
+        numbers = re.findall(r"\d+", col_str)
 
-        if match:
+        # 마지막 숫자가 실제 나이
+        if numbers:
 
-            age = int(match.group())
+            age = int(numbers[-1])
 
+            # 100세 이상 처리
             if age > 100:
                 age = 100
 
@@ -83,7 +86,9 @@ for col in df.columns:
                 )
 
                 if pd.notnull(value):
-                    population_dict[age] = int(value)
+
+                    ages.append(age)
+                    population.append(int(value))
 
             except:
                 pass
@@ -92,9 +97,15 @@ for col in df.columns:
 # 데이터프레임 생성
 # ---------------------------------
 graph_df = pd.DataFrame({
-    "나이": list(population_dict.keys()),
-    "인구수": list(population_dict.values())
+    "나이": ages,
+    "인구수": population
 })
+
+# 나이순 정렬
+graph_df = graph_df.sort_values("나이")
+
+# 중복 제거
+graph_df = graph_df.drop_duplicates(subset="나이")
 
 # ---------------------------------
 # 그래프 생성
@@ -109,18 +120,21 @@ ax.plot(
 )
 
 # ---------------------------------
-# 제목 및 축
+# 제목
 # ---------------------------------
 ax.set_title(
     f"{selected_district} 연령별 인구수",
     fontsize=22
 )
 
+# ---------------------------------
+# 축 설정
+# ---------------------------------
 ax.set_xlabel("나이", fontsize=14)
 ax.set_ylabel("인구수", fontsize=14)
 
 # ---------------------------------
-# x축 설정
+# x축
 # ---------------------------------
 ax.set_xlim(0, 100)
 
@@ -128,13 +142,12 @@ ax.set_xticks(range(0, 101, 10))
 ax.set_xticks(range(0, 101, 1), minor=True)
 
 # ---------------------------------
-# y축 설정
+# y축
 # ---------------------------------
 max_pop = graph_df["인구수"].max()
 
 ax.set_ylim(0, max_pop * 1.1)
 
-# 천단위 콤마 표시
 ax.yaxis.set_major_formatter(
     ticker.FuncFormatter(
         lambda x, pos: f"{int(x):,}"
@@ -164,7 +177,7 @@ ax.grid(
 )
 
 # ---------------------------------
-# 여백 조절
+# 여백
 # ---------------------------------
 plt.tight_layout()
 
