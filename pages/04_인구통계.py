@@ -3,85 +3,86 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import re
 
-# -----------------------------
+# ----------------------------
 # 한글 설정
-# -----------------------------
+# ----------------------------
 plt.rcParams['font.family'] = 'Malgun Gothic'
 plt.rcParams['axes.unicode_minus'] = False
 
-# -----------------------------
+# ----------------------------
 # 데이터 불러오기
-# -----------------------------
+# ----------------------------
 @st.cache_data
 def load_data():
-    return pd.read_csv("population.csv", encoding="cp949")
+    df = pd.read_csv("population.csv", encoding="cp949")
+    return df
 
 df = load_data()
 
-st.title("📊 서울시 연령별 인구 분석")
+st.title("📊 서울시 연령별 인구 꺾은선 그래프")
 
-# -----------------------------
+# ----------------------------
 # 행정구 선택
-# -----------------------------
+# ----------------------------
 districts = df.iloc[:, 0].tolist()
 
 selected_district = st.selectbox(
-    "행정구 선택",
+    "행정구를 선택하세요",
     districts
 )
 
-# -----------------------------
-# 선택 행 데이터
-# -----------------------------
-selected_row = df[df.iloc[:, 0] == selected_district].iloc[0]
+# ----------------------------
+# 선택한 행 가져오기
+# ----------------------------
+row = df[df.iloc[:, 0] == selected_district].iloc[0]
 
-# 연령 컬럼
-age_columns = df.columns[3:]
-
+# ----------------------------
+# 연령 / 인구 데이터 추출
+# ----------------------------
 ages = []
 population = []
 
-for col in age_columns:
+for col in df.columns:
 
-    # 컬럼명에서 숫자 찾기
-    match = re.search(r'\d+', str(col))
+    # "0세", "1세", "100세 이상" 같은 컬럼만 찾기
+    if "세" in str(col):
 
-    if match:
+        match = re.search(r"\d+", str(col))
 
-        age = int(match.group())
+        if match:
 
-        try:
-            value = pd.to_numeric(selected_row[col])
+            age = int(match.group())
 
-            # 숫자인 경우만 추가
-            if pd.notnull(value):
+            try:
+                value = int(str(row[col]).replace(",", ""))
 
                 ages.append(age)
                 population.append(value)
 
-        except:
-            continue
+            except:
+                pass
 
-# -----------------------------
-# 길이 강제 맞춤
-# -----------------------------
-length = min(len(ages), len(population))
+# ----------------------------
+# 데이터프레임으로 정렬
+# ----------------------------
+graph_df = pd.DataFrame({
+    "나이": ages,
+    "인구수": population
+})
 
-ages = ages[:length]
-population = population[:length]
+graph_df = graph_df.sort_values("나이")
 
-# -----------------------------
+# ----------------------------
 # 그래프
-# -----------------------------
-fig, ax = plt.subplots(figsize=(14, 6))
+# ----------------------------
+fig, ax = plt.subplots(figsize=(15, 7))
 
 ax.plot(
-    ages,
-    population,
-    color='hotpink',
+    graph_df["나이"],
+    graph_df["인구수"],
+    color="hotpink",
     linewidth=3,
-    linestyle='-',
-    marker='o',
+    marker="o",
     markersize=4
 )
 
@@ -91,7 +92,7 @@ ax.set_title(
     fontsize=20
 )
 
-# 축 제목
+# 축
 ax.set_xlabel("나이", fontsize=14)
 ax.set_ylabel("인구수", fontsize=14)
 
@@ -100,12 +101,16 @@ ax.set_xticks(range(0, 101, 10))
 
 # 세로 구분선
 ax.grid(
-    axis='x',
-    linestyle='--',
+    axis="x",
+    linestyle="--",
     alpha=0.5
 )
 
-# 전체 그리드
+# 전체 격자
 ax.grid(True, alpha=0.3)
 
+# 여백 자동조절
+plt.tight_layout()
+
+# 출력
 st.pyplot(fig)
