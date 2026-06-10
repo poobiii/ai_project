@@ -6,4 +6,4 @@ matplotlib
 numpy
 plotly
 scikstreamlit
-statsmodelsit-learn
+
