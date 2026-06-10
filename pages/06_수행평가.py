@@ -3,9 +3,9 @@ import pandas as pd
 import plotly.express as px
 from pathlib import Path
 
-# =====================
+# =========================
 # 페이지 설정
-# =====================
+# =========================
 st.set_page_config(
     page_title="서울 미세먼지 분석",
     page_icon="🌫️",
@@ -13,11 +13,11 @@ st.set_page_config(
 )
 
 st.title("🌫️ 서울시 미세먼지 분석 대시보드")
-st.markdown("서울시 지역별 미세먼지(PM10) 및 초미세먼지(PM2.5)를 분석합니다.")
+st.markdown("지역별 미세먼지(PM10)와 초미세먼지(PM2.5)를 분석합니다.")
 
-# =====================
+# =========================
 # 데이터 불러오기
-# =====================
+# =========================
 @st.cache_data
 def load_data():
 
@@ -25,10 +25,28 @@ def load_data():
     csv_path = project_dir / "ABCD.csv"
 
     if not csv_path.exists():
-        st.error(f"ABCD.csv 파일을 찾을 수 없습니다.\n\n{csv_path}")
+        st.error(f"파일을 찾을 수 없습니다.\n{csv_path}")
         st.stop()
 
-    df = pd.read_csv(csv_path)
+    encodings = [
+        "utf-8",
+        "utf-8-sig",
+        "cp949",
+        "euc-kr"
+    ]
+
+    df = None
+
+    for enc in encodings:
+        try:
+            df = pd.read_csv(csv_path, encoding=enc)
+            break
+        except:
+            pass
+
+    if df is None:
+        st.error("CSV 파일을 읽을 수 없습니다.")
+        st.stop()
 
     df.columns = [
         str(col).replace("﻿", "").strip()
@@ -42,11 +60,11 @@ def load_data():
 
 df = load_data()
 
-# =====================
+# =========================
 # 지역 선택
-# =====================
+# =========================
 regions = sorted(
-    [r for r in df["구분"].unique() if r != "평균"]
+    [x for x in df["구분"].unique() if x != "평균"]
 )
 
 selected_region = st.selectbox(
@@ -54,14 +72,11 @@ selected_region = st.selectbox(
     regions
 )
 
-# =====================
-# 지역 데이터
-# =====================
 region_df = df[df["구분"] == selected_region].copy()
 
-# =====================
-# 지역별 평균 PM10 계산
-# =====================
+# =========================
+# 평균 PM10 계산
+# =========================
 avg_pm10 = (
     df[df["구분"] != "평균"]
     .groupby("구분")["미세먼지(PM10)"]
@@ -76,9 +91,9 @@ avg_pm10 = avg_pm10.sort_values(
 
 avg_pm10["순위"] = avg_pm10.index + 1
 
-# =====================
+# =========================
 # 색상
-# =====================
+# =========================
 colors = []
 
 for i, region in enumerate(avg_pm10["구분"]):
@@ -87,14 +102,14 @@ for i, region in enumerate(avg_pm10["구분"]):
         colors.append("#ff0000")
 
     else:
-        shade = max(230 - i * 4, 140)
+        shade = max(230 - i * 4, 130)
         colors.append(f"rgb({shade},{shade},{shade})")
 
 avg_pm10["색상"] = colors
 
-# =====================
+# =========================
 # KPI
-# =====================
+# =========================
 selected_row = avg_pm10[
     avg_pm10["구분"] == selected_region
 ]
@@ -105,23 +120,23 @@ avg_value = float(
     selected_row["미세먼지(PM10)"].iloc[0]
 )
 
-col1, col2 = st.columns(2)
+c1, c2 = st.columns(2)
 
-with col1:
+with c1:
     st.metric(
-        "🏆 미세먼지 순위",
+        "🏆 지역 순위",
         f"{rank}위"
     )
 
-with col2:
+with c2:
     st.metric(
         "🌫️ 평균 PM10",
         f"{avg_value:.1f}"
     )
 
-# =====================
+# =========================
 # 지역별 순위 그래프
-# =====================
+# =========================
 st.subheader("📊 지역별 평균 미세먼지 순위")
 
 fig_rank = px.bar(
@@ -133,15 +148,15 @@ fig_rank = px.bar(
     color_discrete_map="identity"
 )
 
+fig_rank.update_traces(
+    textposition="outside"
+)
+
 fig_rank.update_layout(
     height=650,
     showlegend=False,
     xaxis_title="지역",
-    yaxis_title="평균 PM10",
-)
-
-fig_rank.update_traces(
-    textposition="outside"
+    yaxis_title="평균 PM10"
 )
 
 st.plotly_chart(
@@ -149,9 +164,9 @@ st.plotly_chart(
     use_container_width=True
 )
 
-# =====================
-# 비율 그래프
-# =====================
+# =========================
+# 도넛 차트
+# =========================
 st.subheader(
     f"🥧 {selected_region}의 서울 전체 대비 비율"
 )
@@ -185,18 +200,14 @@ fig_pie.update_traces(
     textinfo="percent+label"
 )
 
-fig_pie.update_layout(
-    height=500
-)
-
 st.plotly_chart(
     fig_pie,
     use_container_width=True
 )
 
-# =====================
+# =========================
 # 월별 변화
-# =====================
+# =========================
 st.subheader(
     f"📈 {selected_region} 월별 미세먼지 변화"
 )
@@ -213,7 +224,10 @@ monthly = (
 fig_month = px.line(
     monthly,
     x="월",
-    y=["미세먼지(PM10)", "초미세먼지(PM25)"],
+    y=[
+        "미세먼지(PM10)",
+        "초미세먼지(PM25)"
+    ],
     markers=True
 )
 
@@ -228,9 +242,9 @@ st.plotly_chart(
     use_container_width=True
 )
 
-# =====================
-# 상관관계
-# =====================
+# =========================
+# 산점도
+# =========================
 st.subheader(
     "🔍 PM10과 PM2.5 관계"
 )
@@ -253,14 +267,16 @@ st.plotly_chart(
     use_container_width=True
 )
 
-# =====================
+# =========================
 # TOP5 / BOTTOM5
-# =====================
+# =========================
 col1, col2 = st.columns(2)
 
 with col1:
 
-    st.subheader("🏆 미세먼지 높은 지역 TOP5")
+    st.subheader(
+        "🏆 미세먼지 높은 지역 TOP5"
+    )
 
     st.dataframe(
         avg_pm10.head(5)[
@@ -272,7 +288,9 @@ with col1:
 
 with col2:
 
-    st.subheader("🌿 공기 좋은 지역 TOP5")
+    st.subheader(
+        "🌿 공기 좋은 지역 TOP5"
+    )
 
     st.dataframe(
         avg_pm10.tail(5)
@@ -284,9 +302,9 @@ with col2:
         use_container_width=True
     )
 
-# =====================
+# =========================
 # 원본 데이터
-# =====================
+# =========================
 with st.expander("📄 원본 데이터 보기"):
 
     st.dataframe(
