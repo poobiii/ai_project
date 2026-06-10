@@ -5,4 +5,5 @@ pandas
 matplotlib
 numpy
 plotly
-scikit-learn
+scikstreamlit
+statsmodelsit-learn
